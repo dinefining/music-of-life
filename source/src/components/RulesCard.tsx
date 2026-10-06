@@ -130,7 +130,7 @@ export const RulesCard: React.FC<Props> = ({ rule, onRuleChange, onClose, anchor
     ref.current?.focus();
     const away = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (ref.current?.contains(t) || anchorRef.current?.contains(t)) return;
+      if (ref.current?.contains(t) || anchorRef.current?.contains(t) || (t as Element).closest?.('[data-dropdown-list]')) return;
       // A click on the board only closes the card; it shouldn't also plant a cell.
       if ((t as HTMLElement).tagName === 'CANVAS') e.stopPropagation();
       onClose();

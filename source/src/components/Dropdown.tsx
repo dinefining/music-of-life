@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../lib/utils';
 
 export type Group = { label?: string; items: string[] };
@@ -22,16 +23,16 @@ interface Props {
   label?: string;
   /** Display text for an item (ids stay as given). */
   format?: (item: string) => string;
-  /** Let the open list reach further left than the field (e.g. over the label column) so long names fit. */
-  listLeft?: string;
 }
 
 /** A grey field that opens an upward list, in the panel's style. */
-export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePreview, renderRight, hotkey, direction = 'up', variant = 'dark', label, format = (v: string) => v, listLeft }) => {
+export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePreview, renderRight, hotkey, direction = 'up', variant = 'dark', label, format = (v: string) => v }) => {
   const items = groups.flatMap((g) => g.items);
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(value);
   const [maxH, setMaxH] = useState(420);
+  // The list is portalled to <body> and positioned against the field, so a scrolling panel can't clip it.
+  const [pos, setPos] = useState<React.CSSProperties>({});
   const original = useRef(value);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -39,16 +40,24 @@ export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePre
 
   const openMenu = () => {
     // Keep the list inside the page margins (16px mobile / 32px desktop), whichever way it opens.
-    const r = rootRef.current?.getBoundingClientRect();
-    if (r) {
-      const margin = window.innerWidth < 640 ? 16 : 32;
-      const room = direction === 'up' ? r.top - margin - 3 : window.innerHeight - r.bottom - margin - 3; // 3 = --gap
-      setMaxH(Math.max(90, Math.min(420, room)));
-    }
+    place();
     original.current = value;
     setHi(value);
     setOpen(true);
   };
+  function place() {
+    const r = rootRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const margin = window.innerWidth < 640 ? 16 : 32;
+    const gap = 3; // --gap
+    const room = direction === 'up' ? r.top - margin - gap : window.innerHeight - r.bottom - margin - gap;
+    setMaxH(Math.max(90, Math.min(420, room)));
+    setPos(
+      direction === 'up'
+        ? { left: r.left, width: r.width, bottom: window.innerHeight - r.top + gap }
+        : { left: r.left, width: r.width, top: r.bottom + gap },
+    );
+  }
   const commit = (v: string) => {
     onChange(v);
     original.current = v;
@@ -68,10 +77,19 @@ export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePre
     listRef.current?.focus();
     itemRefs.current[value]?.scrollIntoView({ block: 'center' });
     const away = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) cancel();
+      const t = e.target as Node;
+      if (!rootRef.current?.contains(t) && !listRef.current?.contains(t)) cancel();
     };
+    // the field may move (panel scroll, resize): follow it
+    const follow = (e: Event) => { if (e.target !== listRef.current) place(); };
     document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', follow, true);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', follow, true);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -133,22 +151,22 @@ export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePre
         </span>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
           ref={listRef}
+          data-dropdown-list
           role="listbox"
           tabIndex={-1}
           aria-labelledby={id}
           aria-activedescendant={`${id}-${hi}`}
           onKeyDown={onListKey}
           onMouseLeave={() => livePreview && move(original.current)}
-          style={{ maxHeight: maxH, ...(listLeft ? { left: listLeft } : {}) }}
+          style={{ maxHeight: maxH, ...pos }}
           className={cn(
-            'absolute left-0 overflow-y-auto overscroll-contain z-30 focus:outline-none',
+            'fixed overflow-y-auto overscroll-contain z-50 text-white text-left normal-case tracking-normal focus:outline-none',
             variant === 'light'
               ? 'bg-[#d9d9d9] [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,.35)_transparent]'
               : 'bg-[var(--field)] [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.3)_transparent]',
-            direction === 'up' ? 'bottom-full mb-[var(--gap)] right-0' : 'top-full mt-[var(--gap)] right-0',
           )}
         >
           {groups.map((g, gi) => (
@@ -194,7 +212,8 @@ export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePre
               ))}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
