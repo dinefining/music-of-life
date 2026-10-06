@@ -2,11 +2,20 @@
 
 Conway's Game of Life as a sequencer. Plant cells, press play, and the pattern plays itself as it grows: a scanline sweeps left to right, every live cell it crosses is a note, and after each sweep the board steps one generation, so the tune keeps changing.
 
-## Run
+## Run it
 
+Open `index.html`. That's it: the app is plain static files (`index.html`, `app.js`, `style.css`) with no build step and nothing to install. It runs from a double-click, offline, or from any static host.
+
+**GitHub Pages:** push this folder as a repo, then **Settings → Pages → Deploy from a branch → `main` / root**. It appears at `https://<user>.github.io/<repo>/`.
+
+## Edit it
+
+The editable source (React + TypeScript + Vite) lives in `source/`. After changing it, regenerate the root files:
+
+    cd source
     npm install
-    npm run dev      # http://localhost:3000
-    npm run build    # one self-contained dist/index.html (fonts and all)
+    npm run dev          # live preview at http://localhost:3000
+    npm run build:site   # rewrites ../index.html, ../app.js, ../style.css
 
 ## How it plays
 
@@ -37,7 +46,7 @@ Click a square to plant · Shift + drag to plant many · Drag to pan · Scroll t
 
 Black canvas, Barlow throughout, dark grey panels. One spacing token (`--gap: 3px`) between every field, key, example square and board cell; 16px panel padding; 32px page margins (16px on phones). Fields are 30px on desktop and step up to the 48px button size on phones, where panels fill the screen between the title and the button row. Tokens live at the top of `src/index.css`.
 
-## Where things live
+## Where things live (in `source/`)
 
 - `src/App.tsx` – layout, panels, keyboard shortcuts
 - `src/components/Board.tsx` – canvas renderer, pan / zoom / paint, auto-framing
