@@ -1,5 +1,5 @@
 import { Cell, Trail, Rule, RULES, key, neighbours, stepLife } from './life';
-import { initAudio, ctx, voice, setEcho } from './audio';
+import { initAudio, ctx, voice, setEcho, LOW_POWER } from './audio';
 import { noteAt, isAudible } from './music';
 
 export type Snapshot = { time: number; gen: number; cells: Map<string, Cell>; trails: Map<string, Trail> };
@@ -14,7 +14,7 @@ export type Mode = 'scan' | 'arp' | 'cell';
 export type Strike = { x: number; y: number; time: number; midi: number; hold?: number };
 
 const LOOKAHEAD = 0.12; // seconds scheduled ahead of the audio clock
-const MAX_VOICES = 6; // per step
+const MAX_VOICES = LOW_POWER ? 4 : 6; // per step (fewer on phones)
 export const MAX_STEPS = 16; // one bar
 
 /** Which step a column (0-based within the sweep) sounds on. */

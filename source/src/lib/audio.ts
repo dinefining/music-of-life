@@ -8,6 +8,12 @@ let rSend: GainNode;
 let fb: GainNode;
 let dry: GainNode;
 let space = 0.5;
+let verb: ConvolverNode;
+let verbOn = false;
+
+/** Phones and tablets: favour stable audio over the lowest latency, and do less work per note. */
+export const LOW_POWER =
+  typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad/i.test(navigator.userAgent));
 
 export function ctx() {
   return _ctx;
@@ -25,7 +31,9 @@ function impulse(c: AudioContext, seconds: number, decay: number) {
 
 export function initAudio() {
   if (!_ctx) {
-    const c = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
+    // 'playback' asks for bigger buffers: a few ms more delay (the visuals compensate via outputLatency)
+    // but no dropouts, which is what crackles on phones. Notes are scheduled ahead, so nothing feels late.
+    const c = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: LOW_POWER ? 'playback' : 'interactive' });
     _ctx = c;
 
     // Glue: gentle compression so dense columns don't clip.
@@ -34,7 +42,17 @@ export function initAudio() {
     comp.ratio.value = 3;
     comp.attack.value = 0.004;
     comp.release.value = 0.25;
-    comp.connect(c.destination);
+
+    // Safety limiter at the very end: a little headroom, and nothing ever goes past full scale.
+    const master = c.createGain();
+    master.gain.value = 0.85;
+    const limiter = c.createDynamicsCompressor();
+    limiter.threshold.value = -3;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.12;
+    comp.connect(master).connect(limiter).connect(c.destination);
 
     bus = c.createGain();
     bus.gain.value = 0.6;
@@ -58,10 +76,14 @@ export function initAudio() {
     hp.connect(comp);
 
     // Small synthetic room.
-    const verb = c.createConvolver();
-    verb.buffer = impulse(c, 4, 2);
+    // Small synthetic room. A convolver is the most expensive node here, so phones get a shorter
+    // impulse, and it's only wired in while ECHO is above zero.
+    verb = c.createConvolver();
+    verb.buffer = impulse(c, LOW_POWER ? 2.5 : 4, 2);
+    verb.connect(comp);
     rSend = c.createGain();
-    bus.connect(rSend).connect(verb).connect(comp);
+    bus.connect(rSend);
+    routeVerb();
     applySpace(c.currentTime, true);
   }
   if (_ctx.state === 'suspended') _ctx.resume();
@@ -89,9 +111,17 @@ function applySpace(t: number, immediate = false) {
   set(dry.gain, 1 - 0.3 * v * v);
 }
 
+function routeVerb() {
+  const on = space > 0.001;
+  if (on === verbOn) return;
+  if (on) rSend.connect(verb);
+  else rSend.disconnect(verb);
+  verbOn = on;
+}
+
 export function setSpace(v: number) {
   space = Math.max(0, Math.min(1, v));
-  if (_ctx) applySpace(_ctx.currentTime);
+  if (_ctx) { applySpace(_ctx.currentTime); routeVerb(); }
 }
 
 export function setEcho(seconds: number) {
@@ -185,7 +215,7 @@ export const SOUNDS: Record<string, Preset> = {
     label: 'bell',
     build: ({ c, out, f, t, vel, dur }) => {
       const ring = Math.max(1.2, dur * 2.2);
-      const end = t + ring * 1.3;
+      const end = t + ring * 1.75; // ~6 time constants: silent before stop
       const env = perc(c, t, 0.18 * vel, 0.002, ring / 3.5);
       env.connect(out);
       const car = osc(c, 'sine', f, t, end);
@@ -221,7 +251,7 @@ export const SOUNDS: Record<string, Preset> = {
   saw: {
     label: 'saw',
     build: ({ c, out, f, t, vel, dur }) => {
-      const end = t + dur * 2.2;
+      const end = t + dur * 3; // ~6 time constants: silent before stop
       const env = perc(c, t, 0.145 * vel, 0.035, dur / 2);
       env.connect(out);
       const lp = c.createBiquadFilter();

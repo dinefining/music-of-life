@@ -60,7 +60,7 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
       const nowMs = performance.now();
       const dt = Math.min(0.1, (nowMs - lastFrame) / 1000);
       lastFrame = nowMs;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // 3x phones: 2x is sharp enough and much cheaper to draw
       const w = canvas.clientWidth, h = canvas.clientHeight;
       if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
         canvas.width = Math.round(w * dpr);
@@ -79,7 +79,7 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
 
       // Camera: after IDLE_MS without input, ease the pattern back to centre,
       // zooming out (never past 1x in) so it fits with a one-cell margin.
-      if (snap.cells.size && nowMs - lastInteract.current > IDLE_MS && !drag.current) {
+      if (snap.cells.size && nowMs - lastInteract.current > IDLE_MS && ptrs.current.size === 0) {
         let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
         for (const c of snap.cells.values()) {
           if (c.x < x0) x0 = c.x;
@@ -243,7 +243,13 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
 
   // ---- interaction ------------------------------------------------------
   const hoverRef = useRef<string | null>(null);
-  const drag = useRef<{ sx: number; sy: number; vx: number; vy: number; moved: boolean; paint: boolean } | null>(null);
+  /**
+   * Pointers on the board, by id. A lone pointer pans (drag) or toggles a cell (tap).
+   * Painting: Shift + drag with a mouse; on touch, hold one finger still and drag another:
+   * the held finger becomes an anchor and the second finger paints.
+   */
+  type Ptr = { sx: number; sy: number; vx: number; vy: number; moved: boolean; role: 'tap' | 'anchor' | 'paint'; last: [number, number] | null };
+  const ptrs = useRef(new Map<number, Ptr>());
 
   const cellAt = (clientX: number, clientY: number): [number, number] => {
     const r = canvasRef.current!.getBoundingClientRect();
@@ -251,6 +257,18 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
     const wx = (clientX - r.left - v.x) / v.k;
     const wy = (clientY - r.top - v.y) / v.k;
     return [Math.round(wx / CELL), Math.round(wy / CELL)];
+  };
+
+  // Paint every cell between the last painted cell and this one, so fast strokes leave no gaps.
+  const paintTo = (p: Ptr, cell: [number, number]) => {
+    const [x1, y1] = cell;
+    const [x0, y0] = p.last ?? cell;
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let i = 0; i <= n; i++) {
+      const t = n ? i / n : 1;
+      props.current.onPaint(Math.round(x0 + (x1 - x0) * t), Math.round(y0 + (y1 - y0) * t));
+    }
+    p.last = cell;
   };
 
   useEffect(() => {
@@ -271,37 +289,49 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
   }, [viewRef]);
 
   const onPointerDown = (ev: React.PointerEvent) => {
-    canvasRef.current!.setPointerCapture(ev.pointerId);
+    try { canvasRef.current!.setPointerCapture(ev.pointerId); } catch { /* pointer already gone */ }
     touched();
     const v = viewRef.current;
-    drag.current = { sx: ev.clientX, sy: ev.clientY, vx: v.x, vy: v.y, moved: false, paint: ev.shiftKey };
-    if (ev.shiftKey) props.current.onPaint(...cellAt(ev.clientX, ev.clientY));
+    const p: Ptr = { sx: ev.clientX, sy: ev.clientY, vx: v.x, vy: v.y, moved: false, role: 'tap', last: null };
+    const others = [...ptrs.current.values()];
+    if (ev.pointerType === 'mouse' ? ev.shiftKey : false) p.role = 'paint';
+    // second finger while the first is held still: first anchors, this one paints
+    const held = others.find((o) => o.role === 'tap' && !o.moved);
+    if (ev.pointerType !== 'mouse' && held) {
+      held.role = 'anchor';
+      p.role = 'paint';
+    } else if (ev.pointerType !== 'mouse' && others.length) {
+      p.role = 'anchor'; // extra fingers during a pan/paint are ignored
+    }
+    ptrs.current.set(ev.pointerId, p);
+    if (p.role === 'paint') paintTo(p, cellAt(ev.clientX, ev.clientY));
   };
 
   const onPointerMove = (ev: React.PointerEvent) => {
     const [cx, cy] = cellAt(ev.clientX, ev.clientY);
     hoverRef.current = ev.pointerType === 'mouse' ? key(cx, cy) : null;
-    const d = drag.current;
-    if (!d) return;
+    const p = ptrs.current.get(ev.pointerId);
+    if (!p) return;
     touched();
-    if (d.paint) {
-      props.current.onPaint(cx, cy);
+    if (p.role === 'paint') {
+      paintTo(p, [cx, cy]);
       return;
     }
-    const dx = ev.clientX - d.sx, dy = ev.clientY - d.sy;
-    if (!d.moved && Math.hypot(dx, dy) > 4) d.moved = true;
-    if (d.moved) {
-      viewRef.current.x = d.vx + dx;
-      viewRef.current.y = d.vy + dy;
+    const dx = ev.clientX - p.sx, dy = ev.clientY - p.sy;
+    // an anchor may wobble a little; a tap turns into a pan once it really moves
+    if (!p.moved && Math.hypot(dx, dy) > (ev.pointerType === 'mouse' ? 4 : 8)) p.moved = true;
+    if (p.role === 'tap' && p.moved) {
+      viewRef.current.x = p.vx + dx;
+      viewRef.current.y = p.vy + dy;
       canvasRef.current!.style.cursor = 'grabbing';
     }
   };
 
   const onPointerUp = (ev: React.PointerEvent) => {
-    const d = drag.current;
-    drag.current = null;
+    const p = ptrs.current.get(ev.pointerId);
+    ptrs.current.delete(ev.pointerId);
     canvasRef.current!.style.cursor = '';
-    if (d && !d.moved && !d.paint) props.current.onToggle(...cellAt(ev.clientX, ev.clientY));
+    if (p && p.role === 'tap' && !p.moved) props.current.onToggle(...cellAt(ev.clientX, ev.clientY));
   };
 
   return (
@@ -311,9 +341,9 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={() => (drag.current = null)}
+      onPointerCancel={(ev) => ptrs.current.delete(ev.pointerId)}
       onPointerLeave={() => (hoverRef.current = null)}
-      aria-label="Music of Life board. Click a cell to toggle it, drag to pan, scroll to zoom, shift-drag to paint."
+      aria-label="Music of Life board. Tap a cell to toggle it, drag to pan, scroll to zoom. Paint with Shift + drag, or on touch hold one finger and drag another."
     />
   );
 };
