@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Barlow", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Unlayered on purpose: a host page's base font rule (e.g. the artifact viewer's reset)
+   would otherwise override Tailwind's layered body font. */
+html,
+body,
+button,
+input,
+select,
+textarea {
+  font-family: "Barlow", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Single dark look, on purpose. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #1a1a1a;
+  --field: #2a2a2a;
+  --field-hover: #333333;
+  --menu: #161616;
+  --gap: 3px; /* the one gap: panel rows, segmented seams, piano, example squares, board cells */
+  --accent: #438a26; /* the key note: piano, grid cells, current item */
+
+  /* Size scale. Desktop: compact 30px fields. */
+  --field-h: 30px;
+  --field-px: 12px;
+  --field-fs: 12px;
+  --label-fs: 11px;
+  --key-row: 30px;
+  --ex-cell: 28px;
+  --ex-fs: 14px;
+  --cap-fs: 10px;
+}
+
+/* Phones: panels fill the screen, so everything steps up to the 48px button size,
+   the piano takes whatever height is left, and examples grow to the panel width. */
+@media (max-width: 639px) {
+  :root {
+    --field-h: 48px;
+    --field-px: 16px;
+    --field-fs: 15px;
+    --label-fs: 13px;
+    --key-row: minmax(48px, 1fr);
+    --ex-cell: calc((100vw - 64px - 12px - 48px) / 6);
+    --ex-fs: 16px;
+    --cap-fs: 12px;
+  }
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased;
+    background: var(--bg);
+    color: #fff;
+  }
+}
+
+@layer components {
+  /* Every field, button-field, dropdown and list row: 30px, caps, semibold. */
+  .field {
+    height: var(--field-h);
+    padding: 0 var(--field-px);
+    background: var(--field);
+    font-size: var(--field-fs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #fff;
+    transition: background-color 120ms;
+  }
+  .field:hover,
+  .field-open {
+    background: var(--field-hover);
+  }
+  .field-static:hover {
+    background: var(--field);
+  }
+  .field:focus-visible {
+    outline: 1px solid rgba(255, 255, 255, 0.7);
+    outline-offset: 0;
+  }
+  .menu {
+    background: var(--menu);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  }
+  .label {
+    font-size: var(--label-fs);
+    letter-spacing: 0.08em;
+    color: #fff;
+  }
+  .panel-in {
+    animation: panel-in 140ms ease-out;
+  }
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-in { animation: none; }
+}
