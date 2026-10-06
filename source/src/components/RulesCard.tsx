@@ -209,11 +209,11 @@ export const RulesCard: React.FC<Props> = ({ rule, onRuleChange, onClose, anchor
                 : ex.n < Math.min(...rule.survive) ? `With ${ex.n === 0 ? 'no' : `only ${ex.n}`} neighbor${s}, a live cell dies of isolation`
                 : `With ${ex.n} neighbors, a live cell dies of crowding`;
           return (
-            <figure key={`${ex.outcome}-${ex.n}-${i}`} className="grid grid-cols-[auto_1fr] border-b border-white/10 last:border-b-0">
-              <span className="p-4 border-r border-white/10">
+            <figure key={`${ex.outcome}-${ex.n}-${i}`} className="grid grid-cols-2 border-b border-white/10 last:border-b-0">
+              <span className="aspect-square p-4 border-r border-white/10 flex items-center justify-center">
                 <Grid n={ex.n} alive={ex.alive} outcome={ex.outcome} t={t} />
               </span>
-              <figcaption className="p-4 label uppercase leading-[1.45]">{sentence}</figcaption>
+              <figcaption className="aspect-square p-4 uppercase text-[length:var(--cap-fs)] leading-[1.45] tracking-[0.08em]">{sentence}</figcaption>
             </figure>
           );
         })}

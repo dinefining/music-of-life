@@ -32,7 +32,9 @@ textarea {
   --field-fs: 12px;
   --label-fs: 11px;
   --key-row: 30px;
-  --ex-cell: 28px;
+  /* Rule examples: two square boxes per row, each half the panel (264px).
+     cell = (half - 32px padding - 2 gaps - 1px divider) / 3 */
+  --ex-cell: calc((132px - 39px) / 3);
   --ex-fs: 14px;
   --cap-fs: 10px;
 }
@@ -48,7 +50,7 @@ textarea {
     --field-fs: 15px;
     --label-fs: 13px;
     --key-row: minmax(var(--field-h), 1fr);
-    --ex-cell: calc((100vw - 64px - 12px - 48px) / 6);
+    --ex-cell: calc(((100vw - 32px) / 2 - 39px) / 3);
     --ex-fs: 16px;
     --cap-fs: 12px;
   }
