@@ -41,11 +41,13 @@ textarea {
    the piano takes whatever height is left, and examples grow to the panel width. */
 @media (max-width: 639px) {
   :root {
-    --field-h: 48px;
+    /* 48px (the button size) when there's room; on short phones shrink so the settings panel,
+       whose content is about 8 fields + 90px tall, still fits without clipping (never below 36px). */
+    --field-h: clamp(36px, calc((var(--frame-h, 640px) - 90px) / 8), 48px);
     --field-px: 16px;
     --field-fs: 15px;
     --label-fs: 13px;
-    --key-row: minmax(48px, 1fr);
+    --key-row: minmax(var(--field-h), 1fr);
     --ex-cell: calc((100vw - 64px - 12px - 48px) / 6);
     --ex-fs: 16px;
     --cap-fs: 12px;

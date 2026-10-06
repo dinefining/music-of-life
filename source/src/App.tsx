@@ -354,7 +354,7 @@ export default function App() {
             <div className="h-px bg-white/10 shrink-0" role="separator" />
 
             {/* On phones this group takes the rest of the panel and the piano grows into it */}
-            <div className="flex-1 min-h-0 sm:flex-none grid grid-cols-[68px_1fr] items-stretch gap-x-2 gap-y-[var(--gap)]">
+            <div className="flex-1 sm:flex-none grid grid-cols-[68px_1fr] items-stretch gap-x-2 gap-y-[var(--gap)]">
               {/* One two-line block (label, then octave), centred on the piano like every label on its field */}
               <div className="self-center flex flex-col gap-1">
                 <span className="label" id="note-label">NOTE</span>
