@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../lib/utils';
 
@@ -45,15 +45,39 @@ export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePre
     setHi(value);
     setOpen(true);
   };
-  function place() {
+  /**
+   * Which way to open: the preferred direction if the whole list fits there,
+   * otherwise whichever side of the field has more room (e.g. fields near the top of a phone panel open down).
+   */
+  function measure() {
     const r = rootRef.current?.getBoundingClientRect();
-    if (!r) return;
+    if (!r) return null;
     const margin = window.innerWidth < 640 ? 16 : 32;
     const gap = 3; // --gap
-    const room = direction === 'up' ? r.top - margin - gap : window.innerHeight - r.bottom - margin - gap;
+    const up = r.top - margin - gap;
+    const down = window.innerHeight - r.bottom - margin - gap;
+    const rows = items.length + groups.filter((g) => g.label).length;
+    const need = Math.min(420, rows * r.height);
+    const pref = direction === 'up' ? up : down;
+    const dir = (pref >= need ? direction : up >= down ? 'up' : 'down') as 'up' | 'down';
+    return { r, gap, dir, room: dir === 'up' ? up : down };
+  }
+  const [dir, setDir] = useState<'up' | 'down'>(direction);
+  // keep the triangle pointing the way the list will actually open
+  useLayoutEffect(() => {
+    const update = () => { const m = measure(); if (m) setDir((d) => (d === m.dir ? d : m.dir)); };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  });
+  function place() {
+    const m = measure();
+    if (!m) return;
+    const { r, gap, room } = m;
+    setDir(m.dir);
     setMaxH(Math.max(90, Math.min(420, room)));
     setPos(
-      direction === 'up'
+      m.dir === 'up'
         ? { left: r.left, width: r.width, bottom: window.innerHeight - r.top + gap }
         : { left: r.left, width: r.width, top: r.bottom + gap },
     );
@@ -146,7 +170,7 @@ export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePre
             aria-hidden="true"
           >
             {/* points the way the list opens */}
-            <path d={direction === 'up' ? 'M0 6h8L4 0z' : 'M0 0h8L4 6z'} fill="currentColor" />
+            <path d={dir === 'up' ? 'M0 6h8L4 0z' : 'M0 0h8L4 6z'} fill="currentColor" />
           </svg>
         </span>
       </button>
