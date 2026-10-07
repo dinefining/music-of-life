@@ -256,21 +256,29 @@ export default function App() {
 
       {/* Info: button bottom-right, card unfolds above it */}
       <div
-        className="absolute right-4 bottom-4 sm:right-8 sm:bottom-8 z-10 flex flex-col items-end gap-[var(--gap)]"
+        className={cn('absolute right-4 bottom-4 sm:right-8 sm:bottom-8 flex flex-col items-end gap-[var(--gap)]', infoOpen ? 'z-30' : 'z-10')}
         style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
+        {infoOpen && <InfoCard rule={rule} onClose={closeInfo} anchorRef={infoBtn} />}
         <button
           ref={infoBtn}
           onClick={() => { setMenu(false); setRulesOpen(false); setInfoOpen((o) => !o); }}
           aria-expanded={infoOpen}
           aria-controls="info"
-          aria-label="How it works"
-          title="How it works (I)"
-          className={cn('w-12 h-12 flex items-center justify-center transition-colors focus:outline-none focus-visible:outline-1 focus-visible:outline-white', infoOpen ? 'bg-[#383838]' : 'bg-[var(--panel)] hover:bg-[#242424]')}
+          aria-label={infoOpen ? 'Close info' : 'How it works'}
+          title={infoOpen ? 'Close (Esc)' : 'How it works (I)'}
+          className={cn('relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:outline-1 focus-visible:outline-white', infoOpen ? 'bg-[#383838]' : 'bg-[var(--panel)] hover:bg-[#242424]')}
         >
+          {/* while info is open this same button closes it */}
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={infoOpen ? '#fff' : '#d9d9d9'} strokeWidth="1.25" aria-hidden="true">
-            <path d="M12 10V19" />
-            <circle cx="12" cy="6" r="0.75" fill={infoOpen ? '#fff' : '#d9d9d9'} />
+            {infoOpen ? (
+              <path d="M6 6l12 12M18 6L6 18" />
+            ) : (
+              <>
+                <path d="M12 10V19" />
+                <circle cx="12" cy="6" r="0.75" fill="#d9d9d9" />
+              </>
+            )}
           </svg>
         </button>
       </div>
@@ -426,7 +434,6 @@ export default function App() {
         </div>
       </div>
 
-      {infoOpen && <InfoCard rule={rule} onClose={closeInfo} anchorRef={infoBtn} />}
     </div>
   );
 }

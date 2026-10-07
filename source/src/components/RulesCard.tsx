@@ -213,7 +213,7 @@ export const RulesCard: React.FC<Props> = ({ rule, onRuleChange, onClose, anchor
               <span className="aspect-square p-4 border-r border-white/10 flex items-center justify-center">
                 <Grid n={ex.n} alive={ex.alive} outcome={ex.outcome} t={t} />
               </span>
-              <figcaption className="aspect-square p-4 uppercase text-[length:var(--cap-fs)] leading-[1.45] tracking-[0.08em]">{sentence}</figcaption>
+              <figcaption className="aspect-square p-4 text-[length:var(--ex-cap-fs)] leading-[1.45] tracking-[0.01em]">{sentence}</figcaption>
             </figure>
           );
         })}

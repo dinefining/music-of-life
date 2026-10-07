@@ -37,6 +37,8 @@ textarea {
   --ex-cell: calc((132px - 39px) / 3);
   --ex-fs: 14px;
   --cap-fs: 10px;
+  --info-fs: 16px;
+  --ex-cap-fs: 12px; /* rule example sentences, regular case */
 }
 
 /* Phones: panels fill the screen, so everything steps up to the 48px button size,
@@ -53,6 +55,8 @@ textarea {
     --ex-cell: calc(((100vw - 32px) / 2 - 39px) / 3);
     --ex-fs: 16px;
     --cap-fs: 12px;
+    --info-fs: 18px;
+    --ex-cap-fs: 14px;
   }
 }
 
@@ -103,6 +107,11 @@ textarea {
     animation: panel-in 140ms ease-out;
   }
 }
+
+/* Info veil: fades in, no movement */
+.info-veil { animation: veil-in 180ms ease-out; }
+@keyframes veil-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .info-veil { animation: none; } }
 
 @keyframes panel-in {
   from { opacity: 0; transform: translateY(6px); }

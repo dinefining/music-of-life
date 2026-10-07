@@ -71,7 +71,7 @@ function toPieces<T extends { href?: string }>(words: T[][]): Piece<T>[] {
 type Ch = { ch: string; i: number; locked: boolean; kind: Kind; href?: string };
 
 /**
- * About panel, centred. Each letter is a cell: blocks are born over letters, live, age and die
+ * About panel. Each letter is a cell: blocks are born over letters, live, age and die
  * under the current rule, the same way cells do on the board. Hover (or tap) to read it all;
  * "Music of Life" is never covered.
  */
@@ -177,84 +177,11 @@ export const InfoCard: React.FC<Props> = ({ rule, onClose, anchorRef }) => {
 
   const reveal = hover || pinned;
 
-  // Phones: the box fills the screen between the HUD and the button row, the close square sits
-  // in its top-right corner, and the text is sized to fill the box.
-  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 639px)').matches);
-  const [frame, setFrame] = useState({ top: 96 });
-  const [fontPx, setFontPx] = useState(16);
-  const boxRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)');
-    const update = () => {
-      setMobile(mq.matches);
-      const hud = document.querySelector('[data-hud]')?.getBoundingClientRect();
-      setFrame({ top: Math.round((hud?.bottom ?? 80) + 16) });
-    };
-    update();
-    mq.addEventListener('change', update);
-    window.addEventListener('resize', update);
-    return () => { mq.removeEventListener('change', update); window.removeEventListener('resize', update); };
-  }, []);
-
-  // Largest size (whole px) at which the text still fits the box.
-  useLayoutEffect(() => {
-    if (!mobile) return;
-    const fit = () => {
-      const box = boxRef.current, text = textRef.current;
-      if (!box || !text) return;
-      // search in quarter-pixel steps so the text fills the box smoothly at every size
-      box.style.lineHeight = '1.4';
-      let lo = 12, hi = 48;
-      while (hi - lo > 0.25) {
-        const mid = (lo + hi) / 2;
-        box.style.fontSize = `${mid}px`;
-        if (text.scrollHeight <= box.clientHeight - 32 && text.scrollWidth <= text.clientWidth) lo = mid; else hi = mid;
-      }
-      lo = Math.floor(lo * 4) / 4;
-      box.style.fontSize = `${lo}px`;
-      // the size can only grow by whole lines, so spread what's left over the line spacing
-      box.style.lineHeight = '1.4';
-      const avail = box.clientHeight - 32;
-      const used = text.scrollHeight;
-      const lh = Math.min(1.9, 1.4 * (1 + (avail - used) / Math.max(used, 1)));
-      box.style.lineHeight = String(lh);
-      if (text.scrollHeight > avail) box.style.lineHeight = '1.4'; // never overflow
-      setFontPx(lo);
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    if (boxRef.current) ro.observe(boxRef.current);
-    if (textRef.current) ro.observe(textRef.current);
-    // the font may finish loading after the first fit and change the line breaks: fit again
-    document.fonts?.ready.then(fit);
-    document.fonts?.addEventListener?.('loadingdone', fit);
-    return () => { ro.disconnect(); document.fonts?.removeEventListener?.('loadingdone', fit); };
-  }, [mobile, frame.top]);
-
-  const closeBtn = (
-    <button
-      onClick={onClose}
-      aria-label="Close"
-      title="Close (Esc)"
-      className={cn(
-        'w-12 h-12 shrink-0 flex items-center justify-center group hover:bg-[#ff3b30] transition-colors focus:outline-none focus-visible:outline-1 focus-visible:outline-white',
-        mobile ? 'absolute top-0 right-0 z-10 bg-[#383838]' : 'bg-[var(--panel)]',
-      )}
-    >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-[#d9d9d9] group-hover:stroke-white transition-colors" strokeWidth="1.25" aria-hidden="true">
-        <path d="M5.5 5.5l13 13M18.5 5.5l-13 13" />
-      </svg>
-    </button>
-  );
-
   const text = (
     // Tap to pin the text readable (touch has no hover)
-    <div ref={textRef} className="relative flex flex-col gap-[1em]" onClick={() => setPinned((p) => !p)}>
+    <div ref={textRef} className="relative flex flex-col gap-[1.2em]" onClick={() => setPinned((p) => !p)}>
       {paras.map((words, pi) => (
-        <p key={pi} aria-label={PARA_TEXT[pi]}>
-          {/* on phones, keep the first lines clear of the close square */}
-          {mobile && pi === 0 && <span className="float-right" style={{ width: 40, height: 32 }} aria-hidden="true" />}
+        <p key={pi} aria-label={PARA_TEXT[pi]} >
           {toPieces<Ch>(words).map((piece, pi2) => {
             const body = piece.parts.map((part, k) =>
               part === ' ' ? ' ' : (
@@ -270,7 +197,7 @@ export const InfoCard: React.FC<Props> = ({ rule, onClose, anchorRef }) => {
                     const color =
                       c.kind === 'title' ? (reveal ? GREEN : '#ffffff')
                       : c.kind === 'credit' ? (c.href ? GREEN : '#ffffff')
-                      : reveal ? '#ffffff' : '#555555';
+                      : reveal ? '#ffffff' : '#7a7a7a';
                     return (
                       <span key={c.i} data-i={c.i} aria-hidden="true" className="relative transition-colors duration-300" style={{ color }}>
                         {c.ch}
@@ -303,47 +230,27 @@ export const InfoCard: React.FC<Props> = ({ rule, onClose, anchorRef }) => {
     </div>
   );
 
-  const typeCls = 'text-left font-medium leading-[1.4] uppercase tracking-[0.05em]';
-  const dialogProps = {
-    ref,
-    id: 'info',
-    role: 'dialog',
-    'aria-label': 'About Music of Life',
-    tabIndex: -1,
-    onKeyDown: (e: React.KeyboardEvent) => e.key === 'Escape' && (e.stopPropagation(), onClose()),
-  } as const;
-  const hoverProps = {
-    onPointerEnter: (e: React.PointerEvent) => e.pointerType === 'mouse' && setHover(true),
-    onPointerLeave: (e: React.PointerEvent) => e.pointerType === 'mouse' && setHover(false),
-  };
-
-  if (mobile) {
-    return (
-      <div
-        {...dialogProps}
-        {...hoverProps}
-        className="panel-in fixed z-30 left-4 right-4 bg-[var(--panel)] focus:outline-none"
-        style={{ top: frame.top, bottom: `calc(16px + 48px + var(--gap) + env(safe-area-inset-bottom, 0px))` }}
-      >
-        {closeBtn}
-        <div ref={boxRef} className={cn('h-full overflow-hidden p-4', typeCls)} style={{ fontSize: fontPx }}>
-          {text}
-        </div>
-      </div>
-    );
-  }
-
+  /**
+   * Full-screen veil over the board (it stays faintly visible), the text centred on it with no box.
+   * The info button stays put and turns into the close button, so nothing else moves.
+   */
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center p-8 pointer-events-none">
-      {/* Close square sits above the box, right-aligned, one --gap away */}
-      <div {...dialogProps} className="panel-in pointer-events-auto w-[min(480px,100%)] flex flex-col items-end gap-[var(--gap)] focus:outline-none">
-        {closeBtn}
-        <div
-          {...hoverProps}
-          className={cn(typeCls, 'w-full max-h-[calc(100dvh-64px-48px-var(--gap))] overflow-y-auto bg-[var(--panel)] p-4 text-[14px] leading-[1.55]')}
-        >
-          {text}
-        </div>
+    <div
+      ref={ref}
+      id="info"
+      role="dialog"
+      aria-label="About Music of Life"
+      tabIndex={-1}
+      onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), onClose())}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      className="info-veil fixed inset-0 flex items-center justify-center px-4 sm:px-8 bg-black/85 focus:outline-none"
+    >
+      <div
+        onPointerEnter={(e) => e.pointerType === 'mouse' && setHover(true)}
+        onPointerLeave={(e) => e.pointerType === 'mouse' && setHover(false)}
+        className="w-full max-w-[520px] max-h-[calc(100dvh-160px)] overflow-y-auto text-left text-[length:var(--info-fs)] leading-[1.6] font-medium"
+      >
+        {text}
       </div>
     </div>
   );
