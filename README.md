@@ -33,7 +33,7 @@ The leaf button opens the rule editor. Pick a published Life-like rule as a star
 
 Click a square to plant · Shift + drag to plant many · Drag to pan · Scroll to zoom
 
-On touch: tap to plant · drag to pan · hold one finger and drag another to paint
+On touch: tap to plant · drag to pan · long-press, then drag to paint · pinch to zoom
 
 | Key | | Key | |
 |---|---|---|---|

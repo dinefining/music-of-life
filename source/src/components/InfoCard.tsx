@@ -8,12 +8,24 @@ interface Props {
   anchorRef: React.RefObject<HTMLElement | null>;
 }
 
-const PARAS = [
-  "Music of Life turns Conway's Game of Life into a sequencer.",
-  'Customize rules and settings, click to plant seeds, shift + drag to plant multiple, then press play to watch your forest grow.',
+/**
+ * Paragraphs as runs. 'title' and 'credit' letters are never masked: the title is white and
+ * turns green when you read; the credit stays white with its links always green.
+ */
+type Kind = 'title' | 'credit' | 'text';
+type Run = { text: string; kind: Kind; href?: string };
+const PARAS: Run[][] = [
+  [{ text: 'Music of Life', kind: 'title' }, { text: " turns Conway's Game of Life into a sequencer.", kind: 'text' }],
+  [{ text: 'Customize rules and settings, click to plant seeds, shift + drag to plant multiple, then press play to watch your forest grow.', kind: 'text' }],
+  [
+    { text: 'A ', kind: 'credit' },
+    { text: 'maybe machine', kind: 'credit', href: 'https://ravipopat.info/maybe-machines' },
+    { text: ' by ', kind: 'credit' },
+    { text: 'Ravi Popat', kind: 'credit', href: 'https://ravipopat.info' },
+    { text: '.', kind: 'credit' },
+  ],
 ];
-/** Never masked. */
-const KEEP = 'Music of Life';
+const PARA_TEXT = PARAS.map((runs) => runs.map((r) => r.text).join(''));
 
 const TICK_MS = 340;
 const AGE_FULL = 5;
@@ -21,8 +33,42 @@ const GREEN_SHARE = 0.3; // share of births that come up green, like key-note ce
 const EASE = 'cubic-bezier(0.45, 0, 0.2, 1)';
 
 type Life = { age: number; green: boolean };
+const GREEN = '#76f04a';
+/**
+ * Lay a paragraph out as pieces that are either plain text or one whole link.
+ * A piece holds word fragments and the spaces between them; a space between a link and plain
+ * text goes with the plain text, so a link never carries a trailing space.
+ */
+type Piece<T> = { href?: string; parts: (T[] | ' ')[] };
+function toPieces<T extends { href?: string }>(words: T[][]): Piece<T>[] {
+  const out: Piece<T>[] = [];
+  words.forEach((word, wi) => {
+    // split the word where the link changes ("Popat" + ".")
+    const groups: T[][] = [];
+    for (const c of word) {
+      const g = groups[groups.length - 1];
+      if (g && g[0].href === c.href) g.push(c);
+      else groups.push([c]);
+    }
+    groups.forEach((g, gi) => {
+      const href = g[0].href;
+      const last = out[out.length - 1];
+      const space = gi === 0 && wi > 0;
+      if (last && last.href === href) {
+        if (space) last.parts.push(' ');
+        last.parts.push(g);
+      } else {
+        const piece: Piece<T> = { href, parts: [] };
+        if (space) (href && last && !last.href ? last.parts : piece.parts).push(' ');
+        piece.parts.push(g);
+        out.push(piece);
+      }
+    });
+  });
+  return out;
+}
 
-type Ch = { ch: string; i: number; locked: boolean };
+type Ch = { ch: string; i: number; locked: boolean; kind: Kind; href?: string };
 
 /**
  * About panel, centred. Each letter is a cell: blocks are born over letters, live, age and die
@@ -42,20 +88,15 @@ export const InfoCard: React.FC<Props> = ({ rule, onClose, anchorRef }) => {
   // Split into words (kept unbreakable) of letters, each with a global index.
   const paras = useMemo(() => {
     let i = 0;
-    return PARAS.map((p, pi) =>
-      p.split(' ').map((w) => {
-        const word: Ch[] = [...w].map((ch) => ({ ch, i: i++, locked: false }));
-        i++; // the space
-        return word;
-      }).map((word, wi, all) => {
-        // lock the letters of "Music of Life" at the start of the first paragraph
-        if (pi === 0) {
-          const before = all.slice(0, wi).reduce((n, w) => n + w.length + 1, 0);
-          for (const c of word) c.locked = before + word.indexOf(c) < KEEP.length;
+    return PARAS.map((runs) => {
+      const words: Ch[][] = [[]];
+      for (const r of runs)
+        for (const ch of r.text) {
+          if (ch === ' ') { words.push([]); i++; continue; }
+          words[words.length - 1].push({ ch, i: i++, kind: r.kind, href: r.href, locked: r.kind !== 'text' });
         }
-        return word;
-      }),
-    );
+      return words.filter((w) => w.length);
+    });
   }, []);
   const cells = useMemo(() => paras.flat(2).filter((c) => !c.locked && /\S/.test(c.ch)), [paras]);
 
@@ -162,19 +203,33 @@ export const InfoCard: React.FC<Props> = ({ rule, onClose, anchorRef }) => {
     const fit = () => {
       const box = boxRef.current, text = textRef.current;
       if (!box || !text) return;
-      let lo = 14, hi = 44;
-      while (lo < hi) {
-        const mid = Math.ceil((lo + hi) / 2);
+      // search in quarter-pixel steps so the text fills the box smoothly at every size
+      box.style.lineHeight = '1.4';
+      let lo = 12, hi = 48;
+      while (hi - lo > 0.25) {
+        const mid = (lo + hi) / 2;
         box.style.fontSize = `${mid}px`;
-        if (text.scrollHeight <= box.clientHeight - 32 && text.scrollWidth <= text.clientWidth) lo = mid; else hi = mid - 1;
+        if (text.scrollHeight <= box.clientHeight - 32 && text.scrollWidth <= text.clientWidth) lo = mid; else hi = mid;
       }
+      lo = Math.floor(lo * 4) / 4;
       box.style.fontSize = `${lo}px`;
+      // the size can only grow by whole lines, so spread what's left over the line spacing
+      box.style.lineHeight = '1.4';
+      const avail = box.clientHeight - 32;
+      const used = text.scrollHeight;
+      const lh = Math.min(1.9, 1.4 * (1 + (avail - used) / Math.max(used, 1)));
+      box.style.lineHeight = String(lh);
+      if (text.scrollHeight > avail) box.style.lineHeight = '1.4'; // never overflow
       setFontPx(lo);
     };
     fit();
     const ro = new ResizeObserver(fit);
     if (boxRef.current) ro.observe(boxRef.current);
-    return () => ro.disconnect();
+    if (textRef.current) ro.observe(textRef.current);
+    // the font may finish loading after the first fit and change the line breaks: fit again
+    document.fonts?.ready.then(fit);
+    document.fonts?.addEventListener?.('loadingdone', fit);
+    return () => { ro.disconnect(); document.fonts?.removeEventListener?.('loadingdone', fit); };
   }, [mobile, frame.top]);
 
   const closeBtn = (
@@ -197,39 +252,52 @@ export const InfoCard: React.FC<Props> = ({ rule, onClose, anchorRef }) => {
     // Tap to pin the text readable (touch has no hover)
     <div ref={textRef} className="relative flex flex-col gap-[1em]" onClick={() => setPinned((p) => !p)}>
       {paras.map((words, pi) => (
-        <p key={pi} aria-label={PARAS[pi]}>
+        <p key={pi} aria-label={PARA_TEXT[pi]}>
           {/* on phones, keep the first lines clear of the close square */}
           {mobile && pi === 0 && <span className="float-right" style={{ width: 40, height: 32 }} aria-hidden="true" />}
-          {words.map((word, wi) => (
-            <React.Fragment key={wi}>
-              <span className="whitespace-nowrap" aria-hidden="true">
-                {word.map((c) => {
-                  const life = ages.get(c.i);
-                  const on = !!life && !reveal && !c.locked;
-                  // young = bright, older = dimmer, like board cells
-                  const k = life ? 1 - (Math.min(life.age, AGE_FULL) / AGE_FULL) * 0.45 : 1;
-                  const bg = life?.green
-                    ? `rgb(${Math.round(0x76 * k)},${Math.round(0xf0 * k)},${Math.round(0x4a * k)})`
-                    : `rgb(${Math.round(255 * k)},${Math.round(255 * k)},${Math.round(255 * k)})`;
-                  return (
-                    <span key={c.i} data-i={c.i} className="relative transition-colors duration-300" style={{ color: c.locked ? (reveal ? '#76f04a' : '#ffffff') : reveal ? '#ffffff' : '#555555' }}>
-                      {c.ch}
-                      <span
-                        className="absolute left-0 right-0 top-1/2 h-[1.05em] pointer-events-none"
-                        style={{
-                          background: bg,
-                          opacity: on ? 1 : 0,
-                          transform: `translateY(-50%) scale(${on ? 1 : 0.6})`,
-                          transition: `opacity 420ms ${EASE}, transform 420ms ${EASE}, background-color 420ms ${EASE}`,
-                        }}
-                      />
-                    </span>
-                  );
-                })}
-              </span>
-              {wi < words.length - 1 && ' '}
-            </React.Fragment>
-          ))}
+          {toPieces<Ch>(words).map((piece, pi2) => {
+            const body = piece.parts.map((part, k) =>
+              part === ' ' ? ' ' : (
+                <span key={k} className="whitespace-nowrap">
+                  {part.map((c) => {
+                    const life = ages.get(c.i);
+                    const on = !!life && !reveal && !c.locked;
+                    // young = bright, older = dimmer, like board cells
+                    const kk = life ? 1 - (Math.min(life.age, AGE_FULL) / AGE_FULL) * 0.45 : 1;
+                    const bg = life?.green
+                      ? `rgb(${Math.round(0x76 * kk)},${Math.round(0xf0 * kk)},${Math.round(0x4a * kk)})`
+                      : `rgb(${Math.round(255 * kk)},${Math.round(255 * kk)},${Math.round(255 * kk)})`;
+                    const color =
+                      c.kind === 'title' ? (reveal ? GREEN : '#ffffff')
+                      : c.kind === 'credit' ? (c.href ? GREEN : '#ffffff')
+                      : reveal ? '#ffffff' : '#555555';
+                    return (
+                      <span key={c.i} data-i={c.i} aria-hidden="true" className="relative transition-colors duration-300" style={{ color }}>
+                        {c.ch}
+                        <span
+                          className="absolute left-0 right-0 top-1/2 h-[1.05em] pointer-events-none"
+                          style={{
+                            background: bg,
+                            opacity: on ? 1 : 0,
+                            transform: `translateY(-50%) scale(${on ? 1 : 0.6})`,
+                            transition: `opacity 420ms ${EASE}, transform 420ms ${EASE}, background-color 420ms ${EASE}`,
+                          }}
+                        />
+                      </span>
+                    );
+                  })}
+                </span>
+              ),
+            );
+            // one link per phrase ("maybe machine", "Ravi Popat"), spaces inside it included
+            return piece.href ? (
+              <a key={pi2} href={piece.href} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()} className="hover:opacity-70 transition-opacity focus:outline-none focus-visible:underline">
+                {body}
+              </a>
+            ) : (
+              <React.Fragment key={pi2}>{body}</React.Fragment>
+            );
+          })}
         </p>
       ))}
     </div>

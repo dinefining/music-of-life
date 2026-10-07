@@ -244,11 +244,15 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
   // ---- interaction ------------------------------------------------------
   const hoverRef = useRef<string | null>(null);
   /**
-   * Pointers on the board, by id. A lone pointer pans (drag) or toggles a cell (tap).
-   * Painting: Shift + drag with a mouse; on touch, hold one finger still and drag another:
-   * the held finger becomes an anchor and the second finger paints.
+   * Pointers on the board, by id.
+   * Mouse: drag pans, click toggles, Shift + drag paints.
+   * Touch: drag pans, tap toggles, long-press (~0.3 s, held still) then drag paints,
+   * two fingers pinch to zoom and pan.
    */
-  type Ptr = { sx: number; sy: number; vx: number; vy: number; moved: boolean; role: 'tap' | 'anchor' | 'paint'; last: [number, number] | null };
+  type Ptr = {
+    sx: number; sy: number; vx: number; vy: number; x: number; y: number;
+    moved: boolean; role: 'tap' | 'paint' | 'pinch' | 'done'; last: [number, number] | null; timer?: number;
+  };
   const ptrs = useRef(new Map<number, Ptr>());
 
   const cellAt = (clientX: number, clientY: number): [number, number] => {
@@ -288,22 +292,47 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
     return () => canvas.removeEventListener('wheel', onWheel);
   }, [viewRef]);
 
+  const LONG_PRESS_MS = 300;
+  const pinch = useRef<{ d: number; mx: number; my: number; vx: number; vy: number; k: number } | null>(null);
+  const pinchState = () => {
+    const [a, b] = [...ptrs.current.values()];
+    const r = canvasRef.current!.getBoundingClientRect();
+    return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2 - r.left, my: (a.y + b.y) / 2 - r.top };
+  };
+
   const onPointerDown = (ev: React.PointerEvent) => {
     try { canvasRef.current!.setPointerCapture(ev.pointerId); } catch { /* pointer already gone */ }
     touched();
     const v = viewRef.current;
-    const p: Ptr = { sx: ev.clientX, sy: ev.clientY, vx: v.x, vy: v.y, moved: false, role: 'tap', last: null };
+    const p: Ptr = { sx: ev.clientX, sy: ev.clientY, x: ev.clientX, y: ev.clientY, vx: v.x, vy: v.y, moved: false, role: 'tap', last: null };
     const others = [...ptrs.current.values()];
-    if (ev.pointerType === 'mouse' ? ev.shiftKey : false) p.role = 'paint';
-    // second finger while the first is held still: first anchors, this one paints
-    const held = others.find((o) => o.role === 'tap' && !o.moved);
-    if (ev.pointerType !== 'mouse' && held) {
-      held.role = 'anchor';
-      p.role = 'paint';
-    } else if (ev.pointerType !== 'mouse' && others.length) {
-      p.role = 'anchor'; // extra fingers during a pan/paint are ignored
+
+    if (ev.pointerType === 'mouse') {
+      if (ev.shiftKey) p.role = 'paint';
+    } else if (others.some((o) => o.role === 'paint')) {
+      p.role = 'done'; // already painting: extra fingers are ignored
+    } else if (others.length === 1) {
+      // second finger: pinch (zoom + pan) with the first
+      const o = others[0];
+      window.clearTimeout(o.timer);
+      o.role = 'pinch';
+      p.role = 'pinch';
+    } else if (others.length > 1) {
+      p.role = 'done';
+    } else {
+      // single finger: becomes a paint stroke if held still for a moment
+      p.timer = window.setTimeout(() => {
+        if (p.role !== 'tap' || p.moved) return;
+        p.role = 'paint';
+        navigator.vibrate?.(8);
+        paintTo(p, cellAt(p.x, p.y));
+      }, LONG_PRESS_MS);
     }
     ptrs.current.set(ev.pointerId, p);
+    if (p.role === 'pinch') {
+      const st = pinchState();
+      pinch.current = { ...st, vx: v.x, vy: v.y, k: v.k };
+    }
     if (p.role === 'paint') paintTo(p, cellAt(ev.clientX, ev.clientY));
   };
 
@@ -312,27 +341,53 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
     hoverRef.current = ev.pointerType === 'mouse' ? key(cx, cy) : null;
     const p = ptrs.current.get(ev.pointerId);
     if (!p) return;
+    p.x = ev.clientX;
+    p.y = ev.clientY;
     touched();
     if (p.role === 'paint') {
       paintTo(p, [cx, cy]);
       return;
     }
+    if (p.role === 'pinch') {
+      const pc = pinch.current;
+      if (!pc || ptrs.current.size < 2) return;
+      const st = pinchState();
+      const v = viewRef.current;
+      const nk = Math.min(3, Math.max(0.25, pc.k * (st.d / pc.d)));
+      // keep the world point that was under the starting midpoint under the current midpoint
+      v.x = st.mx - ((pc.mx - pc.vx) * nk) / pc.k;
+      v.y = st.my - ((pc.my - pc.vy) * nk) / pc.k;
+      v.k = nk;
+      return;
+    }
+    if (p.role !== 'tap') return;
     const dx = ev.clientX - p.sx, dy = ev.clientY - p.sy;
-    // an anchor may wobble a little; a tap turns into a pan once it really moves
-    if (!p.moved && Math.hypot(dx, dy) > (ev.pointerType === 'mouse' ? 4 : 8)) p.moved = true;
-    if (p.role === 'tap' && p.moved) {
+    if (!p.moved && Math.hypot(dx, dy) > (ev.pointerType === 'mouse' ? 4 : 8)) {
+      p.moved = true;
+      window.clearTimeout(p.timer);
+    }
+    if (p.moved) {
       viewRef.current.x = p.vx + dx;
       viewRef.current.y = p.vy + dy;
       canvasRef.current!.style.cursor = 'grabbing';
     }
   };
 
-  const onPointerUp = (ev: React.PointerEvent) => {
-    const p = ptrs.current.get(ev.pointerId);
-    ptrs.current.delete(ev.pointerId);
+  const endPointer = (id: number, tap?: [number, number]) => {
+    const p = ptrs.current.get(id);
+    ptrs.current.delete(id);
+    if (!p) return;
+    window.clearTimeout(p.timer);
     canvasRef.current!.style.cursor = '';
-    if (p && p.role === 'tap' && !p.moved) props.current.onToggle(...cellAt(ev.clientX, ev.clientY));
+    if (p.role === 'pinch') {
+      pinch.current = null;
+      // the finger left behind shouldn't pan or toggle when it lifts
+      for (const o of ptrs.current.values()) if (o.role === 'pinch') o.role = 'done';
+    }
+    if (tap && p.role === 'tap' && !p.moved) props.current.onToggle(...tap);
   };
+
+  const onPointerUp = (ev: React.PointerEvent) => endPointer(ev.pointerId, cellAt(ev.clientX, ev.clientY));
 
   return (
     <canvas
@@ -341,9 +396,9 @@ export const Board: React.FC<Props> = ({ engine, labels, viewRef, onToggle, onPa
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={(ev) => ptrs.current.delete(ev.pointerId)}
+      onPointerCancel={(ev) => endPointer(ev.pointerId)}
       onPointerLeave={() => (hoverRef.current = null)}
-      aria-label="Music of Life board. Tap a cell to toggle it, drag to pan, scroll to zoom. Paint with Shift + drag, or on touch hold one finger and drag another."
+      aria-label="Music of Life board. Tap a cell to toggle it, drag to pan, scroll to zoom. Paint with Shift + drag, or on touch long-press then drag. Pinch to zoom."
     />
   );
 };
