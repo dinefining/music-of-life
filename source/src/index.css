@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "JetBrains Mono", ui-monospace, Menlo, monospace;
 }
 
 /* Unlayered on purpose: a host page's base font rule (e.g. the artifact viewer's reset)
@@ -12,7 +12,7 @@ button,
 input,
 select,
 textarea {
-  font-family: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
 }
 
 /* Single dark look, on purpose. */
@@ -24,6 +24,7 @@ textarea {
   --field-hover: #333333;
   --menu: #161616;
   --gap: 3px; /* the one gap: panel rows, segmented seams, piano, example squares, board cells */
+  --ink: #e6e6e6; /* text: a touch off pure white, easier on the eyes on black */
   --accent: #438a26; /* the key note: piano, grid cells, current item */
 
   /* Size scale. Desktop: compact 30px fields. */
@@ -32,13 +33,20 @@ textarea {
   --field-fs: 12px;
   --label-fs: 11px;
   --key-row: 30px;
-  /* Rule examples: two square boxes per row, each half the panel (264px).
+  /* Width rule: measure in button steps (48px button + 3px gap).
+     n buttons wide = n * step - gap, so edges land on the same grid as the button row.
+     Desktop panels are 6 buttons wide = two rows of the 3-button bar = 303px. */
+  --btn: 48px;
+  --step: calc(var(--btn) + var(--gap));
+  --panel-w: calc(6 * var(--step) - var(--gap));
+
+  /* Rule examples: two square boxes per row, each half the panel.
      cell = (half - 32px padding - 2 gaps - 1px divider) / 3 */
-  --ex-cell: calc((132px - 39px) / 3);
+  --ex-cell: calc((var(--panel-w) / 2 - 39px) / 3);
   --ex-fs: 14px;
   --cap-fs: 10px;
   --info-fs: 16px;
-  --ex-cap-fs: 12px; /* rule example sentences, regular case */
+  --ex-cap-fs: var(--label-fs); /* rule example sentences: always the same size as the section labels */
 }
 
 /* Phones: panels fill the screen, so everything steps up to the 48px button size,
@@ -56,7 +64,6 @@ textarea {
     --ex-fs: 16px;
     --cap-fs: 12px;
     --info-fs: 18px;
-    --ex-cap-fs: 14px;
   }
 }
 
@@ -64,7 +71,7 @@ textarea {
   body {
     @apply font-sans antialiased;
     background: var(--bg);
-    color: #fff;
+    color: var(--ink);
   }
 }
 
@@ -78,7 +85,7 @@ textarea {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #fff;
+    color: var(--ink);
     transition: background-color 120ms;
   }
   .field:hover,
@@ -100,8 +107,8 @@ textarea {
   }
   .label {
     font-size: var(--label-fs);
-    letter-spacing: 0.08em;
-    color: #fff;
+    letter-spacing: 0.02em;
+    color: var(--ink);
   }
   .panel-in {
     animation: panel-in 140ms ease-out;
@@ -120,3 +127,6 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .panel-in { animation: none; }
 }
+
+/* Text that Tailwind marks plain white uses the softened ink too. */
+.text-white { color: var(--ink); }

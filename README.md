@@ -46,7 +46,7 @@ On touch: tap to plant · drag to pan · long-press, then drag to paint · pinch
 
 ## Design system
 
-Black canvas, Barlow throughout, dark grey panels. One spacing token (`--gap: 3px`) between every field, key, example square and board cell; 16px panel padding; 32px page margins (16px on phones). Fields are 30px on desktop and step up to the 48px button size on phones, where panels fill the screen between the title and the button row. Tokens live at the top of `src/index.css`.
+Black canvas, JetBrains Mono throughout, dark grey panels, off-white text (`--ink`). One spacing token (`--gap: 3px`) between every field, key, example square and board cell; 16px panel padding; 32px page margins (16px on phones). Widths are measured in button steps (48px button + 3px gap): desktop panels are 6 buttons wide (303px), exactly two of the 3-button bar. Controls (fields, menus, buttons) are in caps; everything else is regular case. Fields are 30px on desktop and step up to the 48px button size on phones, where panels fill the screen between the title and the button row. Tokens live at the top of `src/index.css`.
 
 ## Where things live (in `source/`)
 

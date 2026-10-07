@@ -200,7 +200,7 @@ export const Dropdown: React.FC<Props> = ({ id, value, groups, onChange, livePre
                   className={cn(
                     // same height as a row, text centred; its own darker shade so it reads as a heading
                     'sticky top-0 z-10 flex items-center leading-none text-[10px] tracking-[0.14em]',
-                    variant === 'light' ? 'h-[30px] px-3 bg-[#c4c4c4] text-black/55' : 'h-[var(--field-h)] px-[var(--field-px)] bg-[#1f1f1f] text-white/45',
+                    variant === 'light' ? 'h-[30px] px-3 bg-[#c4c4c4] text-black/55' : 'h-[var(--field-h)] px-[var(--field-px)] bg-[#1f1f1f] text-white/55',
                   )}
                 >
                   {g.label}

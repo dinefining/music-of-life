@@ -241,7 +241,7 @@ export default function App() {
       <Board engine={engine} labels={labels} viewRef={viewRef} onToggle={onToggle} onPaint={onPaint} onGen={onGen} getInsets={getInsets} />
 
       {/* HUD */}
-      <div ref={hudRef} data-hud className="absolute top-4 left-4 sm:top-8 sm:left-8 pointer-events-none flex flex-col gap-1 tabular-nums uppercase tracking-[0.06em] text-[13px]">
+      <div ref={hudRef} data-hud className="absolute top-4 left-4 sm:top-8 sm:left-8 pointer-events-none flex flex-col gap-1 tabular-nums tracking-[0.02em] text-[13px]">
         <h1 className="font-normal">Music of Life</h1>
         <div className="flex gap-x-2">
           <span>Gen {pad(hud.gen, 4)}</span>
@@ -260,33 +260,47 @@ export default function App() {
         style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         {infoOpen && <InfoCard rule={rule} onClose={closeInfo} anchorRef={infoBtn} />}
-        <button
-          ref={infoBtn}
-          onClick={() => { setMenu(false); setRulesOpen(false); setInfoOpen((o) => !o); }}
-          aria-expanded={infoOpen}
-          aria-controls="info"
-          aria-label={infoOpen ? 'Close info' : 'How it works'}
-          title={infoOpen ? 'Close (Esc)' : 'How it works (I)'}
-          className={cn('relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:outline-1 focus-visible:outline-white', infoOpen ? 'bg-[#383838]' : 'bg-[var(--panel)] hover:bg-[#242424]')}
-        >
-          {/* while info is open this same button closes it */}
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={infoOpen ? '#fff' : '#d9d9d9'} strokeWidth="1.25" aria-hidden="true">
-            {infoOpen ? (
-              <path d="M6 6l12 12M18 6L6 18" />
-            ) : (
-              <>
-                <path d="M12 10V19" />
-                <circle cx="12" cy="6" r="0.75" fill="#d9d9d9" />
-              </>
-            )}
-          </svg>
-        </button>
+        {/* round transport + info, bottom right */}
+        <div className="flex gap-[var(--gap)]">
+            <button
+              onClick={togglePlay}
+              aria-label={playing ? 'Pause' : 'Play'}
+              title="Play / pause (Space)"
+              className={cn('w-12 h-12 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:outline-1 focus-visible:outline-white', playing ? 'bg-[var(--accent)] hover:bg-[#4f9c2e]' : 'bg-[var(--panel)] hover:bg-[#242424]')}
+            >
+              {playing ? (
+                <svg width="14" height="16" viewBox="0 0 16 18" aria-hidden="true"><rect x="1.5" y="0" width="4.5" height="18" fill="var(--ink)" /><rect x="10" y="0" width="4.5" height="18" fill="var(--ink)" /></svg>
+              ) : (
+                <svg width="16" height="18" viewBox="0 0 18 20" aria-hidden="true" className="translate-x-[1px]"><path d="M1 0 18 10 1 20z" fill="#d9d9d9" /></svg>
+              )}
+            </button>
+          <button
+            ref={infoBtn}
+            onClick={() => { setMenu(false); setRulesOpen(false); setInfoOpen((o) => !o); }}
+            aria-expanded={infoOpen}
+            aria-controls="info"
+            aria-label={infoOpen ? 'Close info' : 'How it works'}
+            title={infoOpen ? 'Close (Esc)' : 'How it works (I)'}
+            className={cn('relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:outline-1 focus-visible:outline-white', infoOpen ? 'bg-[#383838]' : 'bg-[var(--panel)] hover:bg-[#242424]')}
+          >
+            {/* while info is open this same button closes it */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={infoOpen ? '#fff' : '#d9d9d9'} strokeWidth="1.25" aria-hidden="true">
+              {infoOpen ? (
+                <path d="M6 6l12 12M18 6L6 18" />
+              ) : (
+                <>
+                  <path d="M12 10V19" />
+                  <circle cx="12" cy="6" r="0.75" fill="#d9d9d9" />
+                </>
+              )}
+            </svg>
+          </button>
+        </div>
       </div>
 
       {hud.pop === 0 && !playing && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none text-[13px] uppercase tracking-[0.06em]">
-          <span className={cn('transition-colors', nudge && 'text-[var(--accent)]')}>Click to plant a seed</span>
-          <span className="text-white/45">then press play</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none text-[13px] tracking-[0.02em]">
+          <span className={cn('transition-colors', nudge && 'text-[var(--accent)]')}>Plant seeds and press play</span>
         </div>
       )}
 
@@ -300,12 +314,12 @@ export default function App() {
           <RulesCard rule={rule} onRuleChange={setRule} onClose={() => setRulesOpen(false)} anchorRef={rulesBtn} />
         )}
         {menu && (
-          <div id="panel" className="panel-in w-[calc(100vw-32px)] h-[var(--frame-h)] sm:w-[264px] sm:h-auto overflow-y-auto overscroll-contain bg-[var(--panel)] p-4 flex flex-col gap-4" role="region" aria-label="Controls">
+          <div id="panel" className="panel-in w-[calc(100vw-32px)] h-[var(--frame-h)] sm:w-[var(--panel-w)] sm:h-auto overflow-y-auto overscroll-contain bg-[var(--panel)] p-4 flex flex-col gap-4" role="region" aria-label="Controls">
             <div className="grid grid-cols-[68px_1fr] items-center gap-x-2 gap-y-[var(--gap)]">
               <label htmlFor="bpm" className="label">BPM</label>
               <BpmField value={bpm} onChange={setBpm} />
 
-              <label htmlFor="sound" className="label">SOUND</label>
+              <label htmlFor="sound" className="label">Sound</label>
               <Dropdown
                 id="sound"
                 value={sound}
@@ -319,7 +333,7 @@ export default function App() {
                 hotkey="v"
               />
 
-              <label htmlFor="scale" className="label">SCALE</label>
+              <label htmlFor="scale" className="label">Scale</label>
               <Dropdown
                 id="scale"
                 value={scale}
@@ -329,7 +343,7 @@ export default function App() {
                 hotkey="s"
               />
 
-              <span className="label" id="mode-label">MODE</span>
+              <span className="label" id="mode-label">Mode</span>
               <div className="grid grid-cols-3 gap-[var(--gap)]" role="group" aria-labelledby="mode-label">
                 {MODES.map((m) => (
                   <button
@@ -337,14 +351,14 @@ export default function App() {
                     onClick={() => setMode(m)}
                     aria-pressed={mode === m}
                     title={MODE_TIPS[m]}
-                    className={cn('field !px-0', mode === m ? '!bg-[#4a4a4a] text-white' : 'text-white/45')}
+                    className={cn('field !px-0', mode === m ? '!bg-[#4a4a4a] text-white' : 'text-white/55')}
                   >
                     {m[0].toUpperCase() + m.slice(1)}
                   </button>
                 ))}
               </div>
 
-              <label htmlFor="stack" className="label" title="Interval between one row and the row above">STACK</label>
+              <label htmlFor="stack" className="label" title="Interval between one row and the row above">Stack</label>
               <Dropdown
                 id="stack"
                 value={stack}
@@ -353,7 +367,7 @@ export default function App() {
                 label="Interval between rows"
               />
 
-              <label htmlFor="space" className="label">ECHO</label>
+              <label htmlFor="space" className="label">Echo</label>
               <Slider id="space" value={space} onChange={setSpaceAmt} label="Echo amount" />
 
             </div>
@@ -365,7 +379,7 @@ export default function App() {
             <div className="flex-1 sm:flex-none grid grid-cols-[68px_1fr] items-stretch gap-x-2 gap-y-[var(--gap)]">
               {/* One two-line block (label, then octave), centred on the piano like every label on its field */}
               <div className="self-center flex flex-col gap-1">
-                <span className="label" id="note-label">NOTE</span>
+                <span className="label" id="note-label">Note</span>
                 <span className="flex items-center gap-1.5 text-[length:var(--field-fs)] tabular-nums" role="group" aria-labelledby="note-label">
                   <span aria-live="polite">{getNoteName(root)}</span>
                   <button onClick={() => shiftOctave(-1)} disabled={octave <= OCT_MIN} className="w-4 text-center text-[17px] leading-none hover:text-white/60 disabled:text-white/20" aria-label="Octave down (Z)" title="Octave down (Z)">−</button>
@@ -408,18 +422,6 @@ export default function App() {
               <path d="M19.38 10.19 L21.86 10.31 L21.86 13.69 L19.38 13.81 L18.50 15.94 L20.17 17.77 L17.77 20.17 L15.94 18.50 L13.81 19.38 L13.69 21.86 L10.31 21.86 L10.19 19.38 L8.06 18.50 L6.23 20.17 L3.83 17.77 L5.50 15.94 L4.62 13.81 L2.14 13.69 L2.14 10.31 L4.62 10.19 L5.50 8.06 L3.83 6.23 L6.23 3.83 L8.06 5.50 L10.19 4.62 L10.31 2.14 L13.69 2.14 L13.81 4.62 L15.94 5.50 L17.77 3.83 L20.17 6.23 L18.50 8.06Z" />
               <circle cx="12" cy="12" r="3.4" />
             </svg>
-          </button>
-          <button
-            onClick={togglePlay}
-            aria-label={playing ? 'Pause' : 'Play'}
-            title="Play / pause (Space)"
-            className="w-12 h-12 bg-[var(--panel)] hover:bg-[#242424] flex items-center justify-center transition-colors focus:outline-none focus-visible:outline-1 focus-visible:outline-white"
-          >
-            {playing ? (
-              <svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true"><rect x="1.5" y="0" width="4.5" height="18" fill="#d9d9d9" /><rect x="10" y="0" width="4.5" height="18" fill="#d9d9d9" /></svg>
-            ) : (
-              <svg width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path d="M1 0 18 10 1 20z" fill="#d9d9d9" /></svg>
-            )}
           </button>
           <button
             onClick={clear}

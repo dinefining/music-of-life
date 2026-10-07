@@ -19,7 +19,7 @@ const PARAS: Run[][] = [
   [{ text: 'Customize rules and settings, click to plant seeds, shift + drag to plant multiple, then press play to watch your forest grow.', kind: 'text' }],
   [
     { text: 'A ', kind: 'credit' },
-    { text: 'maybe machine', kind: 'credit', href: 'https://ravipopat.info/maybe-machines' },
+    { text: 'Maybe Machine', kind: 'credit', href: 'https://ravipopat.info/maybe-machines' },
     { text: ' by ', kind: 'credit' },
     { text: 'Ravi Popat', kind: 'credit', href: 'https://ravipopat.info' },
     { text: '.', kind: 'credit' },
@@ -195,9 +195,9 @@ export const InfoCard: React.FC<Props> = ({ rule, onClose, anchorRef }) => {
                       ? `rgb(${Math.round(0x76 * kk)},${Math.round(0xf0 * kk)},${Math.round(0x4a * kk)})`
                       : `rgb(${Math.round(255 * kk)},${Math.round(255 * kk)},${Math.round(255 * kk)})`;
                     const color =
-                      c.kind === 'title' ? (reveal ? GREEN : '#ffffff')
-                      : c.kind === 'credit' ? (c.href ? GREEN : '#ffffff')
-                      : reveal ? '#ffffff' : '#7a7a7a';
+                      c.kind === 'title' ? (reveal ? GREEN : 'var(--ink)')
+                      : c.kind === 'credit' ? (c.href ? GREEN : 'var(--ink)')
+                      : reveal ? 'var(--ink)' : '#7a7a7a';
                     return (
                       <span key={c.i} data-i={c.i} aria-hidden="true" className="relative transition-colors duration-300" style={{ color }}>
                         {c.ch}

@@ -27,7 +27,7 @@ const BG = '#000000';
 const HOT = '255,59,48'; // #ff3b30, the cell ARP is playing
 const HOT_FADE = 0.28; // seconds to fade back after the step
 const INK = (a: number) => `rgba(255,255,255,${a.toFixed(3)})`;
-const FONT = "Barlow, 'Helvetica Neue', Arial, sans-serif";
+const FONT = "'JetBrains Mono', ui-monospace, Menlo, monospace";
 
 interface Props {
   engine: Engine;

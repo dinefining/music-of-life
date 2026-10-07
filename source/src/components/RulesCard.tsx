@@ -94,7 +94,7 @@ const Grid: React.FC<{ n: number; alive: boolean; outcome: Outcome; t: number }>
 /** A row of nine toggles, one per neighbour count. */
 const CountRow: React.FC<{ label: string; on: number[]; tone: 'born' | 'live'; onToggle: (n: number) => void }> = ({ label, on, tone, onToggle }) => (
   <div className="flex flex-col gap-1.5">
-    <span className="label" style={{ color: tone === 'born' ? BORN : '#fff' }} id={`row-${tone}`}>
+    <span className="label" style={{ color: tone === 'born' ? BORN : 'var(--ink)' }} id={`row-${tone}`}>
       {label}
     </span>
     <div className="grid grid-cols-9 gap-[var(--gap)]" role="group" aria-labelledby={`row-${tone}`}>
@@ -108,7 +108,7 @@ const CountRow: React.FC<{ label: string; on: number[]; tone: 'born' | 'live'; o
             aria-label={`${n} neighbours`}
             className={cn(
               'field !px-0 tabular-nums focus:outline-none focus-visible:outline-1 focus-visible:outline-white',
-              active ? '!text-black' : 'text-white/45 hover:text-white',
+              active ? '!text-black' : 'text-white/55 hover:text-white',
             )}
             style={active ? { background: tone === 'born' ? BORN : LIVE } : undefined}
           >
@@ -156,7 +156,7 @@ export const RulesCard: React.FC<Props> = ({ rule, onRuleChange, onClose, anchor
       aria-label="Rule editor"
       tabIndex={-1}
       onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), onClose())}
-      className={`panel-in w-[calc(100vw-32px)] h-[var(--frame-h)] sm:w-[264px] ${showEx ? 'sm:h-[calc(100dvh-112px-var(--gap))]' : 'sm:h-auto sm:max-h-[calc(100dvh-112px-var(--gap))]'} relative z-20 bg-[var(--panel)] p-4 flex flex-col overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.3)_transparent] text-[13px] leading-[1.55] text-white normal-case tracking-normal text-left focus:outline-none`}
+      className={`panel-in w-[calc(100vw-32px)] h-[var(--frame-h)] sm:w-[var(--panel-w)] ${showEx ? 'sm:h-[calc(100dvh-112px-var(--gap))]' : 'sm:h-auto sm:max-h-[calc(100dvh-112px-var(--gap))]'} relative z-20 bg-[var(--panel)] p-4 flex flex-col overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.3)_transparent] text-[13px] leading-[1.55] text-white normal-case tracking-normal text-left focus:outline-none`}
     >
       <Dropdown
         id="rule-card"
@@ -169,11 +169,11 @@ export const RulesCard: React.FC<Props> = ({ rule, onRuleChange, onClose, anchor
       />
 
       <div className="flex flex-col gap-3 mt-4">
-        <CountRow label="NEIGHBORS NEEDED FOR BIRTH" on={rule.birth} tone="born" onToggle={(n) => toggle('birth', n)} />
-        <CountRow label="NEIGHBORS NEEDED FOR SURVIVAL" on={rule.survive} tone="live" onToggle={(n) => toggle('survive', n)} />
+        <CountRow label="Neighbors needed for birth" on={rule.birth} tone="born" onToggle={(n) => toggle('birth', n)} />
+        <CountRow label="Neighbors needed for survival" on={rule.survive} tone="live" onToggle={(n) => toggle('survive', n)} />
       </div>
       {preset !== 'conway' && (
-        <button onClick={() => onRuleChange(RULES.conway)} className="self-start mt-2 text-[11px] tracking-[0.04em] text-white/45 hover:text-white underline underline-offset-2 decoration-white/25">
+        <button onClick={() => onRuleChange(RULES.conway)} className="self-start mt-2 text-[11px] tracking-[0.04em] text-white/55 hover:text-white underline underline-offset-2 decoration-white/25">
           Reset to Life
         </button>
       )}
@@ -213,7 +213,7 @@ export const RulesCard: React.FC<Props> = ({ rule, onRuleChange, onClose, anchor
               <span className="aspect-square p-4 border-r border-white/10 flex items-center justify-center">
                 <Grid n={ex.n} alive={ex.alive} outcome={ex.outcome} t={t} />
               </span>
-              <figcaption className="aspect-square p-4 text-[length:var(--ex-cap-fs)] leading-[1.45] tracking-[0.01em]">{sentence}</figcaption>
+              <figcaption className="aspect-square p-4 text-[length:var(--ex-cap-fs)] font-medium leading-[1.6]">{sentence}</figcaption>
             </figure>
           );
         })}
