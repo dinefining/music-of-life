@@ -93,10 +93,10 @@ export default function App() {
   const viewRef = useRef<View>({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 20, k: 1 });
   const controlsRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLDivElement>(null);
-  // Phone panels fill the screen between the HUD and the button row: expose that frame as CSS vars.
+  // Phone panels fill the screen from the top page margin down to the button row: expose that frame as CSS vars.
   useLayoutEffect(() => {
     const set = () => {
-      const top = Math.round((hudRef.current?.getBoundingClientRect().bottom ?? 78) + 16);
+      const top = 16; // page margin on phones
       const root = document.documentElement.style;
       root.setProperty('--frame-top', `${top}px`);
       root.setProperty('--frame-h', `calc(100dvh - ${top}px - 16px - 48px - var(--gap) - env(safe-area-inset-bottom, 0px))`);
@@ -314,7 +314,7 @@ export default function App() {
           <RulesCard rule={rule} onRuleChange={setRule} onClose={() => setRulesOpen(false)} anchorRef={rulesBtn} />
         )}
         {menu && (
-          <div id="panel" className="panel-in w-[calc(100vw-32px)] h-[var(--frame-h)] sm:w-[var(--panel-w)] sm:h-auto overflow-y-auto overscroll-contain bg-[var(--panel)] p-4 flex flex-col gap-4" role="region" aria-label="Controls">
+          <div id="panel" className="panel-in w-[calc(100vw-32px)] h-[var(--frame-h)] sm:w-[var(--panel-w)] sm:h-auto overflow-y-auto overscroll-contain glass p-4 flex flex-col gap-4" role="region" aria-label="Controls">
             <div className="grid grid-cols-[68px_1fr] items-center gap-x-2 gap-y-[var(--gap)]">
               <label htmlFor="bpm" className="label">BPM</label>
               <BpmField value={bpm} onChange={setBpm} />

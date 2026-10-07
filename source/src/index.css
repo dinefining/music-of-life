@@ -110,6 +110,12 @@ textarea {
     letter-spacing: 0.02em;
     color: var(--ink);
   }
+  /* Panels: slightly see-through with the board blurred behind them */
+  .glass {
+    background: rgb(26 26 26 / 0.8);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
   .panel-in {
     animation: panel-in 140ms ease-out;
   }

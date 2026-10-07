@@ -156,7 +156,7 @@ export const RulesCard: React.FC<Props> = ({ rule, onRuleChange, onClose, anchor
       aria-label="Rule editor"
       tabIndex={-1}
       onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), onClose())}
-      className={`panel-in w-[calc(100vw-32px)] h-[var(--frame-h)] sm:w-[var(--panel-w)] ${showEx ? 'sm:h-[calc(100dvh-112px-var(--gap))]' : 'sm:h-auto sm:max-h-[calc(100dvh-112px-var(--gap))]'} relative z-20 bg-[var(--panel)] p-4 flex flex-col overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.3)_transparent] text-[13px] leading-[1.55] text-white normal-case tracking-normal text-left focus:outline-none`}
+      className={`panel-in w-[calc(100vw-32px)] h-[var(--frame-h)] sm:w-[var(--panel-w)] ${showEx ? 'sm:h-[calc(100dvh-112px-var(--gap))]' : 'sm:h-auto sm:max-h-[calc(100dvh-112px-var(--gap))]'} relative z-20 glass p-4 flex flex-col overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.3)_transparent] text-[13px] leading-[1.55] text-white normal-case tracking-normal text-left focus:outline-none`}
     >
       <Dropdown
         id="rule-card"
