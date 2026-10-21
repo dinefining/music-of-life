@@ -139,13 +139,16 @@ export default function App() {
   // Frame the pattern in whatever space the HUD and the panel leave free.
   const getInsets = useCallback((): Insets => {
     const w = window.innerWidth, h = window.innerHeight;
-    const top = (hudRef.current?.getBoundingClientRect().bottom ?? 80) + 24;
-    const p = controlsRef.current?.getBoundingClientRect();
     const side = w < 640 ? 16 : 48;
-    if (p && p.right < w * 0.45) return { top, left: p.right + 32, right: side, bottom: 32 }; // panel sits beside
-    // panel sits below; a phone-sized panel covers the board, so then just keep clear of the buttons
-    if (p && h - p.top + 24 < h - top - 120) return { top, left: side, right: side, bottom: h - p.top + 24 };
-    return { top, left: side, right: side, bottom: 16 + 48 + 24 };
+    // Keep the pattern truly centred: the same clearance top and bottom (whichever is bigger of the
+    // title block and the button rows), the same left and right. The button rows alone are not a panel.
+    const hudBottom = (hudRef.current?.getBoundingClientRect().bottom ?? 80) + 24;
+    const buttons = (w < 640 ? 16 : 32) + 48 + 24;
+    const v = Math.max(hudBottom, buttons);
+    // An open panel beside the board (desktop) narrows the stage to the space right of it.
+    const panel = (document.getElementById('panel') || document.getElementById('rules'))?.getBoundingClientRect();
+    if (panel && panel.right < w * 0.45) return { top: v, bottom: v, left: panel.right + 32, right: side };
+    return { top: v, bottom: v, left: side, right: side };
   }, []);
 
   useEffect(() => {
